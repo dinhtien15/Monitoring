@@ -150,29 +150,47 @@ sudo systemctl status grafana-server
 
 
 ### Install alert manager
-Create a user and group for Alertmanager
+Download Prometheus AlertManager
 ```
-sudo useradd -M -r -s /bin/false alertmanager
+wget \
+  https://github.com/prometheus/alertmanager/releases/download/v0.21.0/alertmanager-0.21.0.linux-amd64.tar.gz
 ```
 
-Download and install the Alertmanager binaries
+Create a Prometheus user, required directories, and make prometheus user as the owner of those directories
 ```
-wget https://github.com/prometheus/alertmanager/releases/download/v0.20.0/alertmanager-0.20.0.linux-amd64.tar.gz
-tar xvfz alertmanager-0.20.0.linux-amd64.tar.gz
-sudo cp alertmanager-0.20.0.linux-amd64/alertmanager /usr/local/bin/
-sudo chown alertmanager:alertmanager /usr/local/bin/alertmanager
-sudo mkdir -p /etc/alertmanager
-sudo cp alertmanager-0.20.0.linux-amd64/alertmanager.yml /etc/alertmanager
-sudo chown -R alertmanager:alertmanager /etc/alertmanager
-sudo mkdir -p /var/lib/alertmanager
+sudo groupadd -f alertmanager
+sudo useradd -g alertmanager --no-create-home --shell /bin/false alertmanager
+sudo mkdir -p /etc/alertmanager/templates
+sudo mkdir /var/lib/alertmanager
+sudo chown alertmanager:alertmanager /etc/alertmanager
 sudo chown alertmanager:alertmanager /var/lib/alertmanager
 ```
 
-Create a systemd unit for Alertmanager
+Untar and move the downloaded Prometheus AlertManager binary
 ```
-sudo vi /etc/systemd/system/alertmanager.service
+tar -xvf alertmanager-0.21.0.linux-amd64.tar.gz
+mv alertmanager-0.21.0.linux-amd64 alertmanager-files
+```
+
+Copy alertmanager and amtool binary from prometheus-files folder to /usr/bin and change the ownership to prometheus user
+```
+sudo cp alertmanager-files/alertmanager /usr/bin/
+sudo cp alertmanager-files/amtool /usr/bin/
+sudo chown alertmanager:alertmanager /usr/bin/alertmanager
+sudo chown alertmanager:alertmanager /usr/bin/amtool
+```
+
+Move the alertmanager.yml file from alertmanager-files to the /etc/alertmanager folder and change the ownership to alertmanager user.
+```
+sudo cp alertmanager-files/alertmanager.yml /etc/alertmanager/alertmanager.yml
+sudo chown alertmanager:alertmanager /etc/alertmanager/alertmanager.yml
+```
+Create an alertmanager service file
+```
+sudo vi /usr/lib/systemd/system/alertmanager.service
+
 [Unit]
-Description=Prometheus Alertmanager
+Description=AlertManager
 Wants=network-online.target
 After=network-online.target
 
@@ -180,22 +198,22 @@ After=network-online.target
 User=alertmanager
 Group=alertmanager
 Type=simple
-ExecStart=/usr/local/bin/alertmanager
---config.file /etc/alertmanager/alertmanager.yml
---storage.path /var/lib/alertmanager/
+ExecStart=/usr/bin/alertmanager \
+    --config.file /etc/alertmanager/alertmanager.yml \
+    --storage.path /var/lib/alertmanager/
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-Start and enable the alertmanager service
 ```
-sudo systemctl enable alertmanager
-sudo systemctl start alertmanager
+sudo chmod 664 /usr/lib/systemd/system/alertmanager.service
 ```
 
-Verify the service is running and you can reach it
+Reload the systemd service to register and Start the Prometheus AlertManager service
 ```
+sudo systemctl daemon-reload
+sudo systemctl start alertmanager
 sudo systemctl status alertmanager
-curl localhost:9093
+sudo systemctl enable alertmanager.service
 ```
