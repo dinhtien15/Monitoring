@@ -147,3 +147,55 @@ sudo systemctl status grafana-server
 - When satisfied with the settings, select the Save & test button at the bottom of the screen.
 - If all settings are correct, Grafana confirms the Data source is working
 ```
+
+
+### Install alert manager
+Create a user and group for Alertmanager
+```
+sudo useradd -M -r -s /bin/false alertmanager
+```
+
+Download and install the Alertmanager binaries
+```
+wget https://github.com/prometheus/alertmanager/releases/download/v0.20.0/alertmanager-0.20.0.linux-amd64.tar.gz
+tar xvfz alertmanager-0.20.0.linux-amd64.tar.gz
+sudo cp alertmanager-0.20.0.linux-amd64/alertmanager /usr/local/bin/
+sudo chown alertmanager:alertmanager /usr/local/bin/alertmanager
+sudo mkdir -p /etc/alertmanager
+sudo cp alertmanager-0.20.0.linux-amd64/alertmanager.yml /etc/alertmanager
+sudo chown -R alertmanager:alertmanager /etc/alertmanager
+sudo mkdir -p /var/lib/alertmanager
+sudo chown alertmanager:alertmanager /var/lib/alertmanager
+```
+
+Create a systemd unit for Alertmanager
+```
+sudo vi /etc/systemd/system/alertmanager.service
+[Unit]
+Description=Prometheus Alertmanager
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=alertmanager
+Group=alertmanager
+Type=simple
+ExecStart=/usr/local/bin/alertmanager
+--config.file /etc/alertmanager/alertmanager.yml
+--storage.path /var/lib/alertmanager/
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Start and enable the alertmanager service
+```
+sudo systemctl enable alertmanager
+sudo systemctl start alertmanager
+```
+
+Verify the service is running and you can reach it
+```
+sudo systemctl status alertmanager
+curl localhost:9093
+```
