@@ -19,7 +19,7 @@ Configure Prometheus as a Service
 sudo useradd -rs /bin/false prometheus
 sudo chown -R prometheus: /etc/prometheus /var/lib/prometheus
 ```
-create a prometheus.service 
+Create a prometheus.service 
 ```
 sudo vi /etc/systemd/system/prometheus.service
 
@@ -51,4 +51,7 @@ sudo systemctl enable prometheus
 sudo systemctl start prometheus
 sudo systemctl status prometheus
 ```
+
+Access the Prometheus web interface and dashboard at http://local_ip_addr:9090
+
 
